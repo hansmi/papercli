@@ -71,6 +71,7 @@ func (p *program) run(ctx context.Context, app *kingpin.Application, args []stri
 
 	p.logLevel.SetLevel(customLogLevel)
 
+	cctx := cli.NewContext(p.logger, app)
 	tbl := registerCommands(app)
 
 	commandName, err := app.Parse(args)
@@ -83,7 +84,7 @@ func (p *program) run(ctx context.Context, app *kingpin.Application, args []stri
 		return fmt.Errorf("unknown subcommand %q", commandName)
 	}
 
-	return cmd.Run(ctx, cli.NewContext(p.logger, app))
+	return cmd.Run(ctx, cctx)
 }
 
 func main() {
