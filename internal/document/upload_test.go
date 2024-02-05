@@ -16,7 +16,12 @@ import (
 )
 
 type fakeUploadClient struct {
+	listTagsErr    error
 	waitForTaskErr error
+}
+
+func (c *fakeUploadClient) ListTags(ctx context.Context, opts plclient.ListTagsOptions) ([]plclient.Tag, *plclient.Response, error) {
+	return nil, nil, c.listTagsErr
 }
 
 func (c *fakeUploadClient) UploadDocument(context.Context, io.Reader, plclient.DocumentUploadOptions) (*plclient.DocumentUpload, *plclient.Response, error) {
@@ -49,9 +54,27 @@ func TestUploadHandler(t *testing.T) {
 		{
 			name: "success",
 			h: uploadHandler{
-				path:   os.DevNull,
-				client: &fakeUploadClient{},
+				path: os.DevNull,
 			},
+		},
+		{
+			name: "tag not found",
+			h: uploadHandler{
+				path:     os.DevNull,
+				tagNames: []string{"a"},
+			},
+			wantErr: cmpopts.AnyError,
+		},
+		{
+			name: "tag error",
+			h: uploadHandler{
+				path:     os.DevNull,
+				tagNames: []string{"a"},
+				client: &fakeUploadClient{
+					listTagsErr: errTest,
+				},
+			},
+			wantErr: errTest,
 		},
 		{
 			name: "wait error",
@@ -67,6 +90,10 @@ func TestUploadHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			t.Cleanup(cancel)
+
+			if tc.h.client == nil {
+				tc.h.client = &fakeUploadClient{}
+			}
 
 			err := tc.h.Run(ctx, cli.NewContextForTest(t))
 
