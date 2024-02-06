@@ -41,7 +41,7 @@ func (h *uploadHandler) Setup(cmd *kingpin.CmdClause) {
 
 	cmd.Flag("filename", "Override provided filename.").
 		StringVar(&h.filename)
-	cmd.Flag("tags", "Names of pre-existing tags for document.").
+	cmd.Flag("tag", "Apply a pre-existing tag to the document.").
 		StringsVar(&h.tagNames)
 
 	cmd.Flag("wait", "Wait for document to be consumed.").
