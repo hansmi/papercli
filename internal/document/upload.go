@@ -38,6 +38,13 @@ type uploadHandler struct {
 	ignoreDuplicate bool
 }
 
+func newUploadHandler() *uploadHandler {
+	return &uploadHandler{
+		waitDuration:    time.Hour,
+		ignoreDuplicate: true,
+	}
+}
+
 func (h *uploadHandler) Setup(cmd *kingpin.CmdClause) {
 	cmd.Help("Upload a document for consumption.")
 
@@ -53,11 +60,9 @@ func (h *uploadHandler) Setup(cmd *kingpin.CmdClause) {
 	cmd.Flag("wait", "Wait for document to be consumed.").
 		BoolVar(&h.wait)
 	cmd.Flag("wait_duration", "Maximum amount of time to wait.").
-		Default("1h").
 		DurationVar(&h.waitDuration)
 
 	cmd.Flag("ignore_duplicate", "Suppress error status for duplicated documents.").
-		Default("true").
 		BoolVar(&h.ignoreDuplicate)
 }
 

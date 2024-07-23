@@ -7,5 +7,5 @@ import (
 func RegisterCommands(reg *cli.CommandRegistry, g cli.CommandGroup) {
 	base := g.Command("document", "")
 
-	reg.Add(base.Command("upload", ""), &uploadHandler{})
+	reg.Add(base.Command("upload", ""), newUploadHandler())
 }

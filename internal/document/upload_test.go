@@ -36,6 +36,18 @@ func (c *fakeUploadClient) WaitForTask(context.Context, string, plclient.WaitFor
 	}, c.waitForTaskErr
 }
 
+func newUploadHandlerForTest(patch func(*uploadHandler)) *uploadHandler {
+	h := newUploadHandler()
+	h.path = os.DevNull
+	h.client = &fakeUploadClient{}
+
+	if patch != nil {
+		patch(h)
+	}
+
+	return h
+}
+
 func TestUploadHandler(t *testing.T) {
 	errTest := errors.New("test error")
 	errDuplicate := &plclient.TaskError{
@@ -45,79 +57,68 @@ func TestUploadHandler(t *testing.T) {
 
 	for _, tc := range []struct {
 		name    string
-		h       uploadHandler
+		h       *uploadHandler
 		wantErr error
 	}{
 		{
 			name: "missing file",
-			h: uploadHandler{
-				path: filepath.Join(t.TempDir(), "missing"),
-			},
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.path = filepath.Join(t.TempDir(), "missing")
+			}),
 			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "success",
-			h: uploadHandler{
-				path: os.DevNull,
-			},
+			h:    newUploadHandlerForTest(nil),
 		},
 		{
 			name: "tag not found",
-			h: uploadHandler{
-				path:     os.DevNull,
-				tagNames: []string{"a"},
-			},
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.tagNames = []string{"a"}
+			}),
 			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "tag error",
-			h: uploadHandler{
-				path:     os.DevNull,
-				tagNames: []string{"a"},
-				client: &fakeUploadClient{
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.tagNames = []string{"a"}
+				h.client = &fakeUploadClient{
 					listTagsErr: errTest,
-				},
-			},
+				}
+			}),
 			wantErr: errTest,
 		},
 		{
 			name: "wait error",
-			h: uploadHandler{
-				path: os.DevNull,
-				client: &fakeUploadClient{
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.client = &fakeUploadClient{
 					waitForTaskErr: errTest,
-				},
-			},
+				}
+			}),
 			wantErr: errTest,
 		},
 		{
 			name: "duplicate document",
-			h: uploadHandler{
-				path: os.DevNull,
-				client: &fakeUploadClient{
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.client = &fakeUploadClient{
 					waitForTaskErr: errDuplicate,
-				},
-			},
-			wantErr: errDuplicate,
+				}
+			}),
 		},
 		{
-			name: "duplicate document suppressed",
-			h: uploadHandler{
-				path:            os.DevNull,
-				ignoreDuplicate: true,
-				client: &fakeUploadClient{
+			name: "duplicate document causes error",
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.ignoreDuplicate = false
+				h.client = &fakeUploadClient{
 					waitForTaskErr: errDuplicate,
-				},
-			},
+				}
+			}),
+			wantErr: errDuplicate,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			t.Cleanup(cancel)
-
-			if tc.h.client == nil {
-				tc.h.client = &fakeUploadClient{}
-			}
 
 			err := tc.h.Run(ctx, cli.NewContextForTest(t))
 
