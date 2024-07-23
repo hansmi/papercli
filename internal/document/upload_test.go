@@ -89,6 +89,15 @@ func TestUploadHandler(t *testing.T) {
 			wantErr: errTest,
 		},
 		{
+			name: "wait disabled",
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.wait = false
+				h.client = &fakeUploadClient{
+					waitForTaskErr: errTest,
+				}
+			}),
+		},
+		{
 			name: "wait error",
 			h: newUploadHandlerForTest(func(h *uploadHandler) {
 				h.client = &fakeUploadClient{

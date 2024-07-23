@@ -40,6 +40,7 @@ type uploadHandler struct {
 
 func newUploadHandler() *uploadHandler {
 	return &uploadHandler{
+		wait:            true,
 		waitDuration:    time.Hour,
 		ignoreDuplicate: true,
 	}
@@ -125,21 +126,23 @@ func (h *uploadHandler) Run(ctx context.Context, cctx cli.Context) error {
 	logger.Info("Document uploaded successfully",
 		zap.String("task_id", result.TaskID))
 
-	task, err := client.WaitForTask(ctx, result.TaskID, plclient.WaitForTaskOptions{
-		MaxElapsedTime: h.waitDuration,
-	})
-	if err != nil {
-		var taskErr *plclient.TaskError
+	if h.wait {
+		task, err := client.WaitForTask(ctx, result.TaskID, plclient.WaitForTaskOptions{
+			MaxElapsedTime: h.waitDuration,
+		})
+		if err != nil {
+			var taskErr *plclient.TaskError
 
-		if h.ignoreDuplicate && errors.As(err, &taskErr) && taskErr.Status == plclient.TaskFailure && taskResultNotConsumingDuplicateRe.MatchString(taskErr.Message) {
-			logger.Error("Document is a duplicate", zap.Error(taskErr))
-			return nil
+			if h.ignoreDuplicate && errors.As(err, &taskErr) && taskErr.Status == plclient.TaskFailure && taskResultNotConsumingDuplicateRe.MatchString(taskErr.Message) {
+				logger.Error("Document is a duplicate", zap.Error(taskErr))
+				return nil
+			}
+
+			return fmt.Errorf("waiting for document consumption: %w", err)
 		}
 
-		return fmt.Errorf("waiting for document consumption: %w", err)
+		logger.Info("Document consumed successfully", zap.Any("task", task))
 	}
-
-	logger.Info("Document consumed successfully", zap.Any("task", task))
 
 	return nil
 }
