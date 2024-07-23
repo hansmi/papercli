@@ -2,10 +2,12 @@ package document
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -13,6 +15,8 @@ import (
 	plclient "github.com/hansmi/paperhooks/pkg/client"
 	"go.uber.org/zap"
 )
+
+var taskResultNotConsumingDuplicateRe = regexp.MustCompile(`(?i)\bnot consuming\b.*: It is a duplicate of\b.*\(#\d+\)\s*$`)
 
 type uploadClient interface {
 	ListTags(context.Context, plclient.ListTagsOptions) ([]plclient.Tag, *plclient.Response, error)
@@ -30,6 +34,8 @@ type uploadHandler struct {
 
 	wait         bool
 	waitDuration time.Duration
+
+	ignoreDuplicate bool
 }
 
 func (h *uploadHandler) Setup(cmd *kingpin.CmdClause) {
@@ -49,6 +55,10 @@ func (h *uploadHandler) Setup(cmd *kingpin.CmdClause) {
 	cmd.Flag("wait_duration", "Maximum amount of time to wait.").
 		Default("1h").
 		DurationVar(&h.waitDuration)
+
+	cmd.Flag("ignore_duplicate", "Suppress error status for duplicated documents.").
+		Default("true").
+		BoolVar(&h.ignoreDuplicate)
 }
 
 func (h *uploadHandler) resolveTags(ctx context.Context, client uploadClient) ([]int64, error) {
@@ -110,13 +120,21 @@ func (h *uploadHandler) Run(ctx context.Context, cctx cli.Context) error {
 	logger.Info("Document uploaded successfully",
 		zap.String("task_id", result.TaskID))
 
-	if task, err := client.WaitForTask(ctx, result.TaskID, plclient.WaitForTaskOptions{
+	task, err := client.WaitForTask(ctx, result.TaskID, plclient.WaitForTaskOptions{
 		MaxElapsedTime: h.waitDuration,
-	}); err != nil {
-		return fmt.Errorf("waiting for task: %w", err)
-	} else {
-		logger.Info("Task finished", zap.Any("task", task))
+	})
+	if err != nil {
+		var taskErr *plclient.TaskError
+
+		if h.ignoreDuplicate && errors.As(err, &taskErr) && taskErr.Status == plclient.TaskFailure && taskResultNotConsumingDuplicateRe.MatchString(taskErr.Message) {
+			logger.Error("Document is a duplicate", zap.Error(taskErr))
+			return nil
+		}
+
+		return fmt.Errorf("waiting for document consumption: %w", err)
 	}
+
+	logger.Info("Document consumed successfully", zap.Any("task", task))
 
 	return nil
 }

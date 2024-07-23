@@ -38,6 +38,10 @@ func (c *fakeUploadClient) WaitForTask(context.Context, string, plclient.WaitFor
 
 func TestUploadHandler(t *testing.T) {
 	errTest := errors.New("test error")
+	errDuplicate := &plclient.TaskError{
+		Status:  plclient.TaskFailure,
+		Message: "Not consuming xyz.pdf: It is a duplicate of Name of another document (#1234)",
+	}
 
 	for _, tc := range []struct {
 		name    string
@@ -85,6 +89,26 @@ func TestUploadHandler(t *testing.T) {
 				},
 			},
 			wantErr: errTest,
+		},
+		{
+			name: "duplicate document",
+			h: uploadHandler{
+				path: os.DevNull,
+				client: &fakeUploadClient{
+					waitForTaskErr: errDuplicate,
+				},
+			},
+			wantErr: errDuplicate,
+		},
+		{
+			name: "duplicate document suppressed",
+			h: uploadHandler{
+				path:            os.DevNull,
+				ignoreDuplicate: true,
+				client: &fakeUploadClient{
+					waitForTaskErr: errDuplicate,
+				},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
