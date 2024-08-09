@@ -50,9 +50,17 @@ func newUploadHandlerForTest(patch func(*uploadHandler)) *uploadHandler {
 
 func TestUploadHandler(t *testing.T) {
 	errTest := errors.New("test error")
-	errDuplicate := &plclient.TaskError{
+	errDuplicateLegacy := &plclient.TaskError{
 		Status:  plclient.TaskFailure,
 		Message: "Not consuming xyz.pdf: It is a duplicate of Name of another document (#1234)",
+	}
+	errDuplicate := &plclient.TaskError{
+		Status:  plclient.TaskFailure,
+		Message: "Not consuming xyz.pdf: It is a duplicate of Name of another document (#1234).",
+	}
+	errDuplicateInTrash := &plclient.TaskError{
+		Status:  plclient.TaskFailure,
+		Message: "Not consuming xyz.pdf: It is a duplicate of Name of another document (#1234). Note: existing document is in the trash.",
 	}
 
 	for _, tc := range []struct {
@@ -107,12 +115,29 @@ func TestUploadHandler(t *testing.T) {
 			wantErr: errTest,
 		},
 		{
-			name: "duplicate document",
+			name: "duplicate document before 2.11.3",
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.client = &fakeUploadClient{
+					waitForTaskErr: errDuplicateLegacy,
+				}
+			}),
+		},
+		{
+			name: "duplicate document after 2.11.3",
 			h: newUploadHandlerForTest(func(h *uploadHandler) {
 				h.client = &fakeUploadClient{
 					waitForTaskErr: errDuplicate,
 				}
 			}),
+		},
+		{
+			name: "duplicate document is in trash",
+			h: newUploadHandlerForTest(func(h *uploadHandler) {
+				h.client = &fakeUploadClient{
+					waitForTaskErr: errDuplicateInTrash,
+				}
+			}),
+			wantErr: errDuplicateInTrash,
 		},
 		{
 			name: "duplicate document causes error",

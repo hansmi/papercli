@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var taskResultNotConsumingDuplicateRe = regexp.MustCompile(`(?i)\bnot consuming\b.*: It is a duplicate of\b.*\(#\d+\)\s*$`)
+var taskResultNotConsumingDuplicateRe = regexp.MustCompile(`(?i)\bnot consuming\b.*: It is a duplicate of\b.*\(#\d+\)\s*(?:\.\s*)?$`)
 
 type uploadClient interface {
 	ListTags(context.Context, plclient.ListTagsOptions) ([]plclient.Tag, *plclient.Response, error)
