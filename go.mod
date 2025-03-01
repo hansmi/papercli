@@ -4,7 +4,7 @@ go 1.21.5
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/hansmi/paperhooks v0.0.12
 	go.uber.org/zap v1.27.0
 )
