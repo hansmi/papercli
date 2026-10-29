@@ -10,25 +10,26 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-type contextImpl struct {
-	logger      *zap.Logger
-	clientFlags plclient.Flags
+type Context struct {
+	logger *zap.Logger
 }
 
-func NewContext(t *testing.T) cli.Context {
+var _ cli.Context = (*Context)(nil)
+
+func NewContext(t *testing.T) *Context {
 	t.Helper()
 
-	c := &contextImpl{
+	c := &Context{
 		logger: zaptest.NewLogger(t),
 	}
 
 	return c
 }
 
-func (c *contextImpl) Logger() *zap.Logger {
+func (c *Context) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *contextImpl) Client() (*plclient.Client, error) {
+func (c *Context) Client() (*plclient.Client, error) {
 	return nil, errors.New("client not implemented")
 }
