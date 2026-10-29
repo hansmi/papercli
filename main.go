@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/hansmi/papercli/internal/cli"
+	"github.com/hansmi/papercli/internal/correspondent"
 	"github.com/hansmi/papercli/internal/document"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -36,6 +37,7 @@ func registerCommands(app *kingpin.Application) *cli.CommandRegistry {
 	reg := cli.NewCommandRegistry()
 
 	document.RegisterCommands(reg, app)
+	correspondent.RegisterCommands(reg, app)
 
 	return reg
 }

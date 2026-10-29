@@ -28,6 +28,7 @@ func TestRegisterCommands(t *testing.T) {
 
 	for _, name := range []string{
 		"document upload",
+		"correspondent list",
 	} {
 		if got := reg.Lookup(name); got == nil {
 			t.Errorf("Missing command %q", name)
