@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	plclient "github.com/hansmi/paperhooks/pkg/client"
 	"github.com/hansmi/paperhooks/pkg/kpflag"
@@ -11,6 +13,7 @@ import (
 type Context interface {
 	Logger() *zap.Logger
 	Client() (*plclient.Client, error)
+	Output() io.Writer
 }
 
 type contextImpl struct {
@@ -39,4 +42,8 @@ func (c *contextImpl) Client() (*plclient.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (c *contextImpl) Output() io.Writer {
+	return os.Stdout
 }
