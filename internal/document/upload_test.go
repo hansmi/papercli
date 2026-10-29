@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/hansmi/papercli/internal/cli"
+	"github.com/hansmi/papercli/internal/clitest"
 	plclient "github.com/hansmi/paperhooks/pkg/client"
 )
 
@@ -154,7 +154,7 @@ func TestUploadHandler(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			t.Cleanup(cancel)
 
-			err := tc.h.Run(ctx, cli.NewContextForTest(t))
+			err := tc.h.Run(ctx, clitest.NewContext(t))
 
 			if diff := cmp.Diff(tc.wantErr, err, cmpopts.EquateErrors()); diff != "" {
 				t.Errorf("Run() error diff (-want +got):\n%s", diff)
